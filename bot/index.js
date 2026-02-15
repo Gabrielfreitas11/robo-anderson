@@ -14,6 +14,7 @@ const {
 
 const { loadState, saveState, appendSales, loadSales } = require("./storage");
 const { generateSalesPdf } = require("./pdf");
+const { sendPdfToWebhookWithRetry } = require("./webhook");
 const { nowIso, sleep, withTimeout } = require("./utils");
 
 const SESSION_DIR = path.join(__dirname, "..", ".session");
@@ -284,6 +285,17 @@ async function runOnceCycle(page, cfg, state, knownIdsSet) {
       state.lastPdfAt = nowIso();
       saveState(state);
       console.log(`[bot] PDF gerado: ${outPath}`);
+
+      try {
+        const result = await sendPdfToWebhookWithRetry(outPath);
+        if (result && result.skipped) {
+          console.log("[bot] Webhook de PDF desabilitado (UPSELLER_PDF_WEBHOOK_URL vazio).");
+        } else {
+          console.log(`[bot] PDF enviado ao webhook (HTTP ${result.status}).`);
+        }
+      } catch (err) {
+        console.warn("[bot] Falha ao enviar PDF ao webhook:", err.message);
+      }
     } else {
       const waitSec = Math.ceil((PDF_EVERY_MS - (Date.now() - lastPdf)) / 1000);
       console.log(`[bot] Venda nova detectada, mas PDF está em cooldown (~${waitSec}s).`);
