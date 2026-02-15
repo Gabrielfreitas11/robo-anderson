@@ -36,6 +36,7 @@ function sha1(input) {
 function normalizeMoneyText(text) {
   if (!text) return "";
   return String(text)
+    .replace(/[\u200e\u200f]/g, "")
     .replace(/\s+/g, " ")
     .replace(/R\$\s?/gi, "R$ ")
     .trim();

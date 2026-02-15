@@ -45,7 +45,7 @@ function extractFirstMatch(text, regex) {
 
 function extractFirstMoney(text) {
   // Captura formatos tipo "R$ 29,99" (com ou sem espaço)
-  const m = String(text || "").match(/R\$\s*\d{1,3}(?:\.\d{3})*,\d{2}/i);
+  const m = String(text || "").match(/R\$\s*[\u200e\u200f]*\s*\d{1,3}(?:\.\d{3})*,\d{2}/i);
   return m ? normalizeMoneyText(m[0]) : "";
 }
 
@@ -378,12 +378,98 @@ async function extractSalesFromDom(page) {
   const result = await page.evaluate(() => {
     const cleanText = (s) => String(s || "").replace(/\s+/g, " ").trim();
 
+    const parseQtyToX = (txt) => {
+      const t = cleanText(txt);
+      const m = t.match(/(?:x|×)\s*(\d+)/i);
+      const n = m?.[1] ? Number(m[1]) : null;
+      if (!Number.isFinite(n) || n <= 0) return "";
+      return `x${n}`;
+    };
+
+    const pickFirstMoney = (txt) => {
+      const t = String(txt || "");
+      const m = t.match(/R\$\s*[\u200e\u200f]*\s*\d{1,3}(?:\.\d{3})*,\d{2}/i);
+      return m ? cleanText(String(m[0]).replace(/[\u200e\u200f]/g, "")).replace(/\s+/g, " ") : "";
+    };
+
+    const parseStatusBlocks = (statusTd) => {
+      const info = { pago: "", expira: "", ordenado: "" };
+      if (!statusTd) return info;
+      const blocks = Array.from(statusTd.querySelectorAll(".mb_5"));
+      for (const b of blocks) {
+        const lines = cleanText(b.innerText || "").split(" ");
+        // Melhor extrair por estrutura: primeiro div label e segundo div value
+        const divs = Array.from(b.querySelectorAll(":scope > div"));
+        const label = cleanText(divs[0]?.innerText || "").toLowerCase();
+        const value = cleanText(divs[1]?.innerText || "");
+        if (!label || !value) continue;
+        if (label.includes("pag")) info.pago = value;
+        else if (label.includes("expira")) info.expira = value;
+        else if (label.includes("orden")) info.ordenado = value;
+      }
+      return info;
+    };
+
     const extractTopIdFromRow = (rowEl) => {
       if (!rowEl) return "";
       const a = rowEl.querySelector("a");
       const txt = cleanText((a && a.innerText) || rowEl.innerText || "");
       const m = txt.match(/#UP[0-9A-Z]+/i);
       return m ? m[0].toUpperCase() : "";
+    };
+
+    const parseTopRowMeta = (topRowEl) => {
+      const meta = { conta: "", plataforma: "" };
+      if (!topRowEl) return meta;
+
+      // Conta: costuma estar em span com title (ex: "Ahiper")
+      const contaEl = topRowEl.querySelector(".tr_top_content .mr_10 span[title]");
+      meta.conta = cleanText(contaEl?.getAttribute("title") || contaEl?.innerText || "");
+
+      // Plataforma: geralmente é o último span do bloco da direita (ex: "Mercado Libre")
+      const platCandidates = Array.from(topRowEl.querySelectorAll(".tr_top_content .mr_10 span"))
+        .map((el) => cleanText(el.innerText))
+        .filter(Boolean);
+      meta.plataforma = platCandidates.find((t) => /mercado\s*libre/i.test(t)) || platCandidates[platCandidates.length - 1] || "";
+
+      return meta;
+    };
+
+    const parseItemsFromProductTd = (productTd) => {
+      if (!productTd) return [];
+
+      // Cada item costuma estar em um bloco com classe "ml_12 flex mb_20"
+      const blocks = Array.from(productTd.querySelectorAll(".ml_12.flex.mb_20"));
+      const items = [];
+
+      const parseBlock = (block) => {
+        const skuA = block.querySelector(".line_overflow_2 a[title]");
+        const sku = cleanText(skuA?.getAttribute("title") || skuA?.innerText || "");
+        const qty = parseQtyToX(block.querySelector("b")?.innerText || "");
+        const preco = pickFirstMoney(block.innerText || "");
+
+        // Variação costuma estar na 3a linha dentro de .flex_1 (logo após o preço)
+        const flex1 = block.querySelector(".flex_1");
+        const childTexts = flex1 ? Array.from(flex1.children).map((el) => cleanText(el.innerText)) : [];
+        const variacaoCandidate = childTexts.find((t) => t && !/R\$/i.test(t) && !/(?:x|×)\s*\d+/i.test(t) && t !== sku);
+        const variacao = cleanText(variacaoCandidate || "");
+
+        const hasAny = Boolean(sku || preco || qty || variacao);
+        if (!hasAny) return;
+        items.push({ sku, preco, variacao, quantidade: qty });
+      };
+
+      for (const b of blocks) parseBlock(b);
+
+      // Fallback: quando não há blocos, tenta pelos links de SKU
+      if (items.length === 0) {
+        const skus = Array.from(productTd.querySelectorAll(".line_overflow_2 a[title]"))
+          .map((a) => cleanText(a.getAttribute("title") || a.innerText || ""))
+          .filter(Boolean);
+        for (const sku of skus) items.push({ sku, preco: "", variacao: "", quantidade: "" });
+      }
+
+      return items;
     };
 
     // Preferência: linhas com classe my_table_border (informação do usuário)
@@ -403,17 +489,59 @@ async function extractSalesFromDom(page) {
           prev = prev.previousElementSibling;
         }
 
+        const topMeta = parseTopRowMeta(prev && prev.classList && prev.classList.contains("top_row") ? prev : null);
+
         // Se for uma linha de tabela, tenta pegar td; senão usa quebras de linha do texto.
         // Também tentamos extrair múltiplos produtos (quando houver) pelo 1o td.
         const tdEls = Array.from(el.querySelectorAll("td"));
         const tds = tdEls.map((td) => td.innerText || "").filter(Boolean);
 
+        // Se o layout for o do exemplo, extraímos campos estruturados.
+        const productTd = tdEls[0];
+        const items = parseItemsFromProductTd(productTd);
+
+        const valorPedido = pickFirstMoney(tdEls[1]?.innerText || "") || cleanText(tdEls[1]?.innerText || "");
+        const clienteNome = cleanText(tdEls[2]?.querySelector("span[title]")?.getAttribute("title") || tdEls[2]?.querySelector("span[title]")?.innerText || "");
+        const cidadeUf = cleanText(tdEls[2]?.querySelector(".f_gray_8c")?.innerText || "");
+
+        const pedidoNumero = cleanText(tdEls[3]?.innerText || "").match(/\b\d{10,}\b/)?.[0] || "";
+        const statusInfo = parseStatusBlocks(tdEls[4]);
+        const envio = cleanText(tdEls[5]?.getAttribute("title") || tdEls[5]?.querySelector("[title]")?.getAttribute("title") || tdEls[5]?.innerText || "");
+
+        const structuredSale = {
+          upsellerId,
+          id: upsellerId || pedidoNumero,
+          pedidoNumero,
+          valorPedido: cleanText(String(valorPedido || "").replace(/[\u200e\u200f]/g, "")),
+          nome: clienteNome,
+          cliente: clienteNome,
+          cidadeUf,
+          pago: statusInfo.pago,
+          expira: statusInfo.expira,
+          ordenado: statusInfo.ordenado,
+          envio,
+          conta: topMeta.conta,
+          plataforma: topMeta.plataforma,
+          itens: items,
+          produtos: Array.from(new Set(items.map((i) => i && i.sku).filter(Boolean))),
+        };
+
+        // Campos de compatibilidade com o pipeline antigo
+        if (!structuredSale.dataHora) structuredSale.dataHora = structuredSale.pago || structuredSale.ordenado || "";
+        if (!structuredSale.valor) structuredSale.valor = structuredSale.valorPedido || pickFirstMoney(valorPedido);
+        if (!structuredSale.produto) structuredSale.produto = structuredSale.produtos.join(" | ");
+
+        // Se conseguimos extrair itens ou algum identificador, preferimos o payload estruturado.
+        const hasStructured = Boolean(structuredSale.id || structuredSale.pedidoNumero || structuredSale.nome || structuredSale.produtos.length);
+        if (hasStructured) {
+          rows.push({ upsellerId, sale: structuredSale, cells: tds });
+          continue;
+        }
+
+        // Fallback antigo: segue coletando colunas para parsing heurístico.
         let productCodes = [];
         const firstTd = tdEls[0];
         if (firstTd) {
-          // No HTML de exemplo, o identificador de cada item (SKU/código/nome) fica em:
-          // `td:first .line_overflow_2 a[title]`
-          // Isso permite identificar pedidos com mais de 1 produto.
           productCodes = Array.from(firstTd.querySelectorAll(".line_overflow_2 a[title]"))
             .map((a) => String(a.getAttribute("title") || a.innerText || "").trim())
             .filter(Boolean)
@@ -466,6 +594,12 @@ async function extractSalesFromDom(page) {
   const sales = [];
   for (const row of result.rows || []) {
     if (result.source === "my_table_border") {
+      if (row && typeof row === "object" && row.sale && typeof row.sale === "object") {
+        const sale = row.sale;
+        sales.push(sale);
+        continue;
+      }
+
       const segments = Array.isArray(row) ? row : row?.cells;
       const sale = coerceSaleFromSegments(segments);
       if (!sale) continue;

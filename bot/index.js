@@ -14,7 +14,7 @@ const {
 
 const { loadState, saveState, appendSales, loadSales } = require("./storage");
 const { generateSalesPdf } = require("./pdf");
-const { sendPdfToWebhookWithRetry } = require("./webhook");
+const { sendSalesToWebhookSequentially } = require("./webhook");
 const { nowIso, sleep, withTimeout } = require("./utils");
 
 const SESSION_DIR = path.join(__dirname, "..", ".session");
@@ -264,11 +264,57 @@ async function runOnceCycle(page, cfg, state, knownIdsSet) {
   const fresh = dedupeNewSales(sales, knownIdsSet);
 
   let appended = 0;
+  let appendedSales = [];
   if (fresh.length > 0) {
-    ({ appended } = appendSales(fresh));
+    ({ appended, appendedSales } = appendSales(fresh));
     console.log(`[bot] +${appended} novas vendas (total conhecido: ${knownIdsSet.size})`);
   } else {
     console.log("[bot] Nenhuma venda nova.");
+  }
+
+  // Webhook: envia cada venda nova (um objeto por POST) com delay entre disparos
+  if (appendedSales.length > 0) {
+    try {
+      const payloads = [];
+      for (const sale of appendedSales) {
+        const base = {
+          upsellerId: sale?.upsellerId || sale?.id || "",
+          pedidoNumero: sale?.pedidoNumero || "",
+          nPedido: sale?.pedidoNumero || "",
+          valorPedido: sale?.valorPedido || sale?.valor || "",
+          valorDoPedido: sale?.valorPedido || sale?.valor || "",
+          nome: sale?.nome || sale?.cliente || "",
+          cidadeUf: sale?.cidadeUf || "",
+          cidadeUF: sale?.cidadeUf || "",
+          pago: sale?.pago || sale?.dataHora || "",
+          expira: sale?.expira || "",
+          envio: sale?.envio || "",
+          conta: sale?.conta || "",
+          plataforma: sale?.plataforma || "",
+        };
+
+        const itens = Array.isArray(sale?.itens) ? sale.itens : [];
+        if (itens.length > 0) {
+          for (const item of itens) {
+            payloads.push({
+              ...base,
+              sku: item?.sku || "",
+              preco: item?.preco || "",
+              variacao: item?.variacao || "",
+              quantidade: item?.quantidade || "",
+            });
+          }
+        } else {
+          // Fallback: envia a venda como veio (caso não tenha itens estruturados)
+          payloads.push({ ...base, ...sale });
+        }
+      }
+
+      const r = await sendSalesToWebhookSequentially(payloads);
+      console.log(`[bot] Webhook: ${r.sent} objeto(s) enviado(s).`);
+    } catch (err) {
+      console.warn("[bot] Falha ao enviar vendas ao webhook:", err.message);
+    }
   }
 
   state.knownIds = Array.from(knownIdsSet).slice(-50_000); // evita crescimento infinito
@@ -285,17 +331,6 @@ async function runOnceCycle(page, cfg, state, knownIdsSet) {
       state.lastPdfAt = nowIso();
       saveState(state);
       console.log(`[bot] PDF gerado: ${outPath}`);
-
-      try {
-        const result = await sendPdfToWebhookWithRetry(outPath);
-        if (result && result.skipped) {
-          console.log("[bot] Webhook de PDF desabilitado (UPSELLER_PDF_WEBHOOK_URL vazio).");
-        } else {
-          console.log(`[bot] PDF enviado ao webhook (HTTP ${result.status}).`);
-        }
-      } catch (err) {
-        console.warn("[bot] Falha ao enviar PDF ao webhook:", err.message);
-      }
     } else {
       const waitSec = Math.ceil((PDF_EVERY_MS - (Date.now() - lastPdf)) / 1000);
       console.log(`[bot] Venda nova detectada, mas PDF está em cooldown (~${waitSec}s).`);

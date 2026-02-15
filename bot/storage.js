@@ -89,11 +89,11 @@ function appendSales(newSales) {
     return true;
   });
 
-  if (filtered.length === 0) return { appended: 0 };
+  if (filtered.length === 0) return { appended: 0, appendedSales: [] };
 
   const merged = existing.concat(filtered);
   atomicWriteJson(SALES_FILE, merged);
-  return { appended: filtered.length };
+  return { appended: filtered.length, appendedSales: filtered };
 }
 
 function loadState() {

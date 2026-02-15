@@ -44,6 +44,14 @@ Atualização do painel:
 
 - `UPSELLER_RELOAD_EVERY_MS`: força recarregar a página periodicamente para aparecerem pedidos novos (padrão: `30000`)
 
+Webhook (envio de vendas em JSON, 1 venda por requisição):
+
+- `UPSELLER_SALES_WEBHOOK_URL`: URL do webhook (padrão: `https://webhook.n8n.spaceai.com.br/webhook/upseller`). Para desabilitar, defina vazio.
+- `UPSELLER_SALES_WEBHOOK_DELAY_MS`: delay entre disparos quando chegam várias vendas (padrão: `800`)
+- `UPSELLER_SALES_WEBHOOK_TIMEOUT_MS`: timeout por requisição (padrão: `15000`)
+- `UPSELLER_SALES_WEBHOOK_RETRIES`: tentativas em caso de 429/5xx (padrão: `5`)
+- `UPSELLER_SALES_WEBHOOK_RETRY_DELAY_MS`: backoff base entre tentativas (padrão: `1000`)
+
 ## Sobre os avisos no console
 
 É normal aparecerem mensagens como:
