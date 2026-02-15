@@ -1,0 +1,4 @@
+node_modules
+.session
+bot/reports
+.DS_Store

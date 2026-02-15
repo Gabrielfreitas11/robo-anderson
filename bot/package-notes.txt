@@ -1,0 +1,10 @@
+Este arquivo é apenas informativo.
+
+Dependências usadas:
+- puppeteer (automação do navegador)
+- pdfkit (geração de PDF)
+- fs (persistência local)
+
+Para rodar:
+- npm install
+- npm start
