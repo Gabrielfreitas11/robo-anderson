@@ -526,6 +526,30 @@ async function extractSalesFromDom(page) {
       return items;
     };
 
+    const pickPlatformOrderNumberFromTd = (orderTd) => {
+      if (!orderTd) return "";
+
+      // Em alguns layouts (ex: Shopee), o número vem em um div específico.
+      // Observação: não confundir com o código #UP... (que fica na top_row).
+      const explicitEl = orderTd.querySelector(".copy_target_text") || orderTd.querySelector(":scope > div") || null;
+      const explicitTxt = cleanText(explicitEl?.innerText || "");
+      if (explicitTxt && !/^#UP/i.test(explicitTxt)) {
+        const token = explicitTxt.match(/\b[A-Z0-9][A-Z0-9-]{7,}\b/i)?.[0] || "";
+        if (token) return token;
+      }
+
+      const raw = cleanText(orderTd.innerText || "");
+      if (!raw) return "";
+
+      // Mercado Livre: numérico longo
+      const mNum = raw.match(/\b\d{10,}\b/)?.[0] || "";
+      if (mNum) return mNum;
+
+      // Shopee/outros: alfanumérico longo (ex: 2602181WJE8H5G, 260205UQJDHMDK)
+      const mAlphaNum = raw.match(/\b[A-Z0-9][A-Z0-9-]{7,}\b/i)?.[0] || "";
+      return mAlphaNum || "";
+    };
+
     // Preferência: linhas com classe my_table_border (informação do usuário)
     // Importante: o ID (#UP...) fica em uma linha `tr.top_row` anterior.
     const bordered = Array.from(document.querySelectorAll(".my_table_border"));
@@ -558,7 +582,7 @@ async function extractSalesFromDom(page) {
         const clienteNome = cleanText(tdEls[2]?.querySelector("span[title]")?.getAttribute("title") || tdEls[2]?.querySelector("span[title]")?.innerText || "");
         const cidadeUf = cleanText(tdEls[2]?.querySelector(".f_gray_8c")?.innerText || "");
 
-        const pedidoNumeroExterno = cleanText(tdEls[3]?.innerText || "").match(/\b\d{10,}\b/)?.[0] || "";
+        const pedidoNumeroExterno = pickPlatformOrderNumberFromTd(tdEls[3]);
         // Mantém compatibilidade com o comportamento anterior:
         // - `upsellerId` guarda o #UP... (copy_target_text)
         // - `pedidoNumero` guarda o número longo da coluna (quando existir)
