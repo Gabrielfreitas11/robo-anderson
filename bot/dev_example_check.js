@@ -46,6 +46,12 @@ async function main() {
   console.log("DOM counts:", counts);
   console.log("sales:", { count: sales.length, uniqueIds: uniqueIds.size });
 
+  const targetPlatformOrder = "2602181WJE8H5G";
+  const platformHit = sales.find((s) => String(s?.pedidoNumero || "").trim() === targetPlatformOrder);
+  const missingPedidoNumero = sales.filter((s) => !String(s?.pedidoNumero || "").trim()).length;
+  console.log("platform order target", targetPlatformOrder, "found?", Boolean(platformHit), platformHit ? { id: platformHit.id, upsellerId: platformHit.upsellerId } : null);
+  console.log("missing pedidoNumero:", missingPedidoNumero);
+
   const missingTargets = [
     "#UP5HGF014291",
     "#UP5HGF014305",
