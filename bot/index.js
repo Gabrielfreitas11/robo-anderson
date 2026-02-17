@@ -285,7 +285,8 @@ async function runOnceCycle(page, cfg, state, knownIdsSet) {
           codigoUpseller: sale?.upsellerId || sale?.id || "",
           codigo: sale?.upsellerId || sale?.id || "",
           pedidoNumero: sale?.pedidoNumero || "",
-          nPedido: sale?.pedidoNumero || "",
+          // nPedido deve ser o código do Upseller (copy_target_text: #UP...)
+          nPedido: sale?.upsellerId || sale?.id || "",
           valorPedido: sale?.valorPedido || sale?.valor || "",
           valorDoPedido: sale?.valorPedido || sale?.valor || "",
           nome: sale?.nome || sale?.cliente || "",

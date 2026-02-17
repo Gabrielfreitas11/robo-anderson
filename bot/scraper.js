@@ -552,9 +552,10 @@ async function extractSalesFromDom(page) {
         const cidadeUf = cleanText(tdEls[2]?.querySelector(".f_gray_8c")?.innerText || "");
 
         const pedidoNumeroExterno = cleanText(tdEls[3]?.innerText || "").match(/\b\d{10,}\b/)?.[0] || "";
-        // Importante: no Upseller, o número exibido em `.copy_target_text` (#UP...) é o número do pedido.
-        // A coluna (4o TD) costuma conter um identificador externo/subpedido (ex: marketplace).
-        const pedidoNumero = upsellerId || pedidoNumeroExterno;
+        // Mantém compatibilidade com o comportamento anterior:
+        // - `upsellerId` guarda o #UP... (copy_target_text)
+        // - `pedidoNumero` guarda o número longo da coluna (quando existir)
+        const pedidoNumero = pedidoNumeroExterno;
         const statusInfo = parseStatusBlocks(tdEls[4]);
         const envio = cleanText(tdEls[5]?.getAttribute("title") || tdEls[5]?.querySelector("[title]")?.getAttribute("title") || tdEls[5]?.innerText || "");
 
