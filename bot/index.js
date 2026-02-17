@@ -60,7 +60,10 @@ function getEnvConfig() {
     actionTimeoutMs: Number(process.env.ACTION_TIMEOUT_MS || 30_000),
 
     // Performance
+    // Mantemos bloqueio de fonts/mídia por padrão, mas NÃO bloqueamos imagens
+    // para não atrapalhar o preenchimento do `src` (a imagem é enviada ao webhook via URL).
     blockResources: envFlag("BLOCK_RESOURCES", true),
+    blockImages: envFlag("BLOCK_IMAGES", false),
 
     // Logs
     logPageConsole: envFlag("LOG_PAGE_CONSOLE", true),
@@ -85,7 +88,7 @@ async function createBrowserAndPage(cfg) {
     await page.setRequestInterception(true);
     page.on("request", (req) => {
       const type = req.resourceType();
-      if (type === "image" || type === "media" || type === "font") {
+      if ((cfg.blockImages && type === "image") || type === "media" || type === "font") {
         return req.abort();
       }
       return req.continue();

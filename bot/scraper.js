@@ -442,9 +442,53 @@ async function extractSalesFromDom(page) {
       const blocks = Array.from(productTd.querySelectorAll(".ml_12.flex.mb_20"));
       const items = [];
 
+      const toAbsUrl = (u) => {
+        const raw = cleanText(u);
+        if (!raw) return "";
+        try {
+          return new URL(raw, window.location.href).href;
+        } catch {
+          return raw;
+        }
+      };
+
+      const pickFirstFromSrcset = (srcset) => {
+        const t = String(srcset || "").trim();
+        if (!t) return "";
+        // Pega o primeiro item do srcset: "url 1x, url2 2x"
+        const first = t.split(",")[0];
+        return cleanText(first.split(/\s+/)[0] || "");
+      };
+
+      const getImageUrlFromBlock = (block) => {
+        if (!block) return "";
+
+        const imgEl = block.querySelector("img.img_local") || block.querySelector(".img_local_out img") || block.querySelector("img");
+        if (imgEl) {
+          const candidate =
+            cleanText(imgEl.currentSrc || "") ||
+            cleanText(imgEl.src || "") ||
+            cleanText(imgEl.getAttribute("src") || "") ||
+            cleanText(imgEl.getAttribute("data-src") || "") ||
+            cleanText(imgEl.getAttribute("data-original") || "") ||
+            cleanText(imgEl.getAttribute("data-lazy-src") || "") ||
+            cleanText(imgEl.getAttribute("data-echo") || "") ||
+            pickFirstFromSrcset(imgEl.getAttribute("srcset") || "") ||
+            pickFirstFromSrcset(imgEl.getAttribute("data-srcset") || "");
+          if (candidate) return toAbsUrl(candidate);
+        }
+
+        // Fallback: alguns layouts usam background-image no wrapper
+        const bgEl = block.querySelector(".img_local_out") || block.querySelector(".img_box") || block;
+        const bg = bgEl && bgEl.style ? bgEl.style.backgroundImage : "";
+        const m = String(bg || "").match(/url\(["']?([^"')]+)["']?\)/i);
+        if (m?.[1]) return toAbsUrl(m[1]);
+
+        return "";
+      };
+
       const parseBlock = (block) => {
-        const imgEl = block.querySelector("img.img_local");
-        const imagem = cleanText(imgEl?.getAttribute("src") || imgEl?.getAttribute("data-src") || "");
+        const imagem = getImageUrlFromBlock(block);
 
         const skuA = block.querySelector(".line_overflow_2 a[title]");
         const sku = cleanText(skuA?.getAttribute("title") || skuA?.innerText || "");
