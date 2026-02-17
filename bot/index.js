@@ -279,6 +279,8 @@ async function runOnceCycle(page, cfg, state, knownIdsSet) {
       for (const sale of appendedSales) {
         const base = {
           upsellerId: sale?.upsellerId || sale?.id || "",
+          codigoUpseller: sale?.upsellerId || sale?.id || "",
+          codigo: sale?.upsellerId || sale?.id || "",
           pedidoNumero: sale?.pedidoNumero || "",
           nPedido: sale?.pedidoNumero || "",
           valorPedido: sale?.valorPedido || sale?.valor || "",

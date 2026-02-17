@@ -412,7 +412,7 @@ async function extractSalesFromDom(page) {
 
     const extractTopIdFromRow = (rowEl) => {
       if (!rowEl) return "";
-      const a = rowEl.querySelector("a");
+      const a = rowEl.querySelector("a.copy_target_text") || rowEl.querySelector("a");
       const txt = cleanText((a && a.innerText) || rowEl.innerText || "");
       const m = txt.match(/#UP[0-9A-Z]+/i);
       return m ? m[0].toUpperCase() : "";
