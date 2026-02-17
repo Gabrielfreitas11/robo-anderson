@@ -412,8 +412,15 @@ async function extractSalesFromDom(page) {
 
     const extractTopIdFromRow = (rowEl) => {
       if (!rowEl) return "";
+      // Não depender de `.copy_target_text` (pode aparecer só após interação).
+      // Preferimos sempre varrer o texto completo da `top_row`.
+      const fullTxt = cleanText(rowEl.innerText || "");
+      const m1 = fullTxt.match(/#UP[0-9A-Z]+/i);
+      if (m1) return m1[0].toUpperCase();
+
+      // Fallback: tenta em anchors (caso o texto geral esteja vazio por algum motivo)
       const a = rowEl.querySelector("a.copy_target_text") || rowEl.querySelector("a");
-      const txt = cleanText((a && a.innerText) || rowEl.innerText || "");
+      const txt = cleanText((a && a.innerText) || "");
       const m = txt.match(/#UP[0-9A-Z]+/i);
       return m ? m[0].toUpperCase() : "";
     };

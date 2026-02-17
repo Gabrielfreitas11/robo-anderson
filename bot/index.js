@@ -280,13 +280,18 @@ async function runOnceCycle(page, cfg, state, knownIdsSet) {
     try {
       const payloads = [];
       for (const sale of appendedSales) {
+        const upsellerCodeRaw = (sale?.upsellerId || sale?.id || "").toString().trim();
+        const upsellerCode = /^#UP[0-9A-Z]+$/i.test(upsellerCodeRaw) ? upsellerCodeRaw.toUpperCase() : "";
+
         const base = {
-          upsellerId: sale?.upsellerId || sale?.id || "",
-          codigoUpseller: sale?.upsellerId || sale?.id || "",
-          codigo: sale?.upsellerId || sale?.id || "",
+          // Código do Upseller (começa com #UP...)
+          upsellerId: upsellerCode,
+          codigoUpseller: upsellerCode,
+          codigo: upsellerCode,
+
+          // Nº de Pedido da Plataforma (coluna do row_item)
           pedidoNumero: sale?.pedidoNumero || "",
-          // nPedido deve ser o código do Upseller (copy_target_text: #UP...)
-          nPedido: sale?.upsellerId || sale?.id || "",
+          nPedido: sale?.pedidoNumero || "",
           valorPedido: sale?.valorPedido || sale?.valor || "",
           valorDoPedido: sale?.valorPedido || sale?.valor || "",
           nome: sale?.nome || sale?.cliente || "",
