@@ -443,6 +443,9 @@ async function extractSalesFromDom(page) {
       const items = [];
 
       const parseBlock = (block) => {
+        const imgEl = block.querySelector("img.img_local");
+        const imagem = cleanText(imgEl?.getAttribute("src") || imgEl?.getAttribute("data-src") || "");
+
         const skuA = block.querySelector(".line_overflow_2 a[title]");
         const sku = cleanText(skuA?.getAttribute("title") || skuA?.innerText || "");
         const qty = parseQtyToX(block.querySelector("b")?.innerText || "");
@@ -456,7 +459,7 @@ async function extractSalesFromDom(page) {
 
         const hasAny = Boolean(sku || preco || qty || variacao);
         if (!hasAny) return;
-        items.push({ sku, preco, variacao, quantidade: qty });
+        items.push({ sku, preco, variacao, quantidade: qty, imagem });
       };
 
       for (const b of blocks) parseBlock(b);

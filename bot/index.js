@@ -302,6 +302,8 @@ async function runOnceCycle(page, cfg, state, knownIdsSet) {
               preco: item?.preco || "",
               variacao: item?.variacao || "",
               quantidade: item?.quantidade || "",
+              imagem: item?.imagem || "",
+              Imagem: item?.imagem || "",
             });
           }
         } else {
