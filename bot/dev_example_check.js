@@ -52,6 +52,20 @@ async function main() {
   console.log("platform order target", targetPlatformOrder, "found?", Boolean(platformHit), platformHit ? { id: platformHit.id, upsellerId: platformHit.upsellerId } : null);
   console.log("missing pedidoNumero:", missingPedidoNumero);
 
+  const targetSku = "00001480E";
+  let skuHit = null;
+  for (const s of sales) {
+    const itens = Array.isArray(s?.itens) ? s.itens : [];
+    for (const item of itens) {
+      if (String(item?.sku || "").trim() === targetSku) {
+        skuHit = { id: s.id, upsellerId: s.upsellerId, pedidoNumero: s.pedidoNumero };
+        break;
+      }
+    }
+    if (skuHit) break;
+  }
+  console.log("SKU target", targetSku, "found?", Boolean(skuHit), skuHit);
+
   const missingTargets = [
     "#UP5HGF014291",
     "#UP5HGF014305",

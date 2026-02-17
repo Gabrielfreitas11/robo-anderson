@@ -497,7 +497,10 @@ async function extractSalesFromDom(page) {
       const parseBlock = (block) => {
         const imagem = getImageUrlFromBlock(block);
 
-        const skuA = block.querySelector(".line_overflow_2 a[title]");
+        const skuA =
+          block.querySelector(".line_overflow_2 a[title]") ||
+          block.querySelector("a.break_spaces") ||
+          block.querySelector(".break_spaces");
         const sku = cleanText(skuA?.getAttribute("title") || skuA?.innerText || "");
         const qty = parseQtyToX(block.querySelector("b")?.innerText || "");
         const preco = pickFirstMoney(block.innerText || "");
@@ -517,7 +520,7 @@ async function extractSalesFromDom(page) {
 
       // Fallback: quando não há blocos, tenta pelos links de SKU
       if (items.length === 0) {
-        const skus = Array.from(productTd.querySelectorAll(".line_overflow_2 a[title]"))
+        const skus = Array.from(productTd.querySelectorAll(".line_overflow_2 a[title], a.break_spaces, .break_spaces"))
           .map((a) => cleanText(a.getAttribute("title") || a.innerText || ""))
           .filter(Boolean);
         for (const sku of skus) items.push({ sku, preco: "", variacao: "", quantidade: "" });
