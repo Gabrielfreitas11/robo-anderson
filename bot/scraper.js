@@ -507,7 +507,10 @@ async function extractSalesFromDom(page) {
         const clienteNome = cleanText(tdEls[2]?.querySelector("span[title]")?.getAttribute("title") || tdEls[2]?.querySelector("span[title]")?.innerText || "");
         const cidadeUf = cleanText(tdEls[2]?.querySelector(".f_gray_8c")?.innerText || "");
 
-        const pedidoNumero = cleanText(tdEls[3]?.innerText || "").match(/\b\d{10,}\b/)?.[0] || "";
+        const pedidoNumeroExterno = cleanText(tdEls[3]?.innerText || "").match(/\b\d{10,}\b/)?.[0] || "";
+        // Importante: no Upseller, o número exibido em `.copy_target_text` (#UP...) é o número do pedido.
+        // A coluna (4o TD) costuma conter um identificador externo/subpedido (ex: marketplace).
+        const pedidoNumero = upsellerId || pedidoNumeroExterno;
         const statusInfo = parseStatusBlocks(tdEls[4]);
         const envio = cleanText(tdEls[5]?.getAttribute("title") || tdEls[5]?.querySelector("[title]")?.getAttribute("title") || tdEls[5]?.innerText || "");
 
@@ -515,6 +518,7 @@ async function extractSalesFromDom(page) {
           upsellerId,
           id: upsellerId || pedidoNumero,
           pedidoNumero,
+          pedidoNumeroExterno,
           valorPedido: cleanText(String(valorPedido || "").replace(/[\u200e\u200f]/g, "")),
           nome: clienteNome,
           cliente: clienteNome,
