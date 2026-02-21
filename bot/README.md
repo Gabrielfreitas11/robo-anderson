@@ -18,6 +18,43 @@ npm install
 npm start
 ```
 
+## Botão na Mesa (macOS)
+
+Você tem duas opções simples para iniciar “com um clique”:
+
+1) Duplo clique (mais simples)
+
+- Use o arquivo [scripts/start.command](../scripts/start.command) (duplo clique abre o Terminal e roda o bot).
+- Você pode arrastar esse arquivo para a Mesa (Desktop).
+
+2) Ícone de aplicativo (.app)
+
+- Gere um app na Mesa com:
+
+```bash
+chmod +x scripts/build-mac-app.sh
+./scripts/build-mac-app.sh
+```
+
+Isso cria um "Upseller Bot.app" na Mesa que, ao clicar, abre o Terminal e executa `npm start` na pasta do projeto.
+
+## Botão na Área de Trabalho (Windows)
+
+1) Duplo clique (mais simples)
+
+- Use o arquivo [scripts/start-windows.bat](../scripts/start-windows.bat) (duplo clique abre um terminal e roda o bot).
+- Você pode criar um atalho desse `.bat` na Área de Trabalho.
+
+2) Criar atalho automaticamente (PowerShell)
+
+Abra um PowerShell na pasta do projeto e rode:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\create-desktop-shortcut.ps1
+```
+
+Isso cria um atalho "Upseller Bot" na Área de Trabalho apontando para o `.bat`.
+
 Ao abrir o Chrome (visível), faça login manualmente. A sessão fica persistida em `./.session`.
 
 Após o login, o bot navega automaticamente para `.../pt/order/all-orders` (página de pedidos) e roda a coleta a partir dela.
