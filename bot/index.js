@@ -289,6 +289,9 @@ async function runOnceCycle(page, cfg, state, knownIdsSet) {
         const upsellerCode = /^#UP[0-9A-Z]+$/i.test(upsellerCodeRaw) ? upsellerCodeRaw.toUpperCase() : "";
 
         const base = {
+          // Identificador da instância (para diferenciar múltiplos logins/lojas no mesmo webhook)
+          instance,
+
           // Código do Upseller (começa com #UP...)
           upsellerId: upsellerCode,
           codigoUpseller: upsellerCode,

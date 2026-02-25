@@ -93,6 +93,8 @@ Webhook (envio de vendas em JSON, 1 venda por requisição):
 
 Você pode rodar duas instâncias do bot ao mesmo tempo, cada uma com seu próprio login/sessão, mas enviando tudo para o mesmo webhook.
 
+Quando você usa instâncias, o webhook recebe também o campo `instance` (ex.: `loja1`, `loja2`) para você diferenciar no n8n.
+
 Como funciona:
 
 - Sessão do Chrome (cookies/login):
