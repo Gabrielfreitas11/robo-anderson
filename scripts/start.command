@@ -9,11 +9,18 @@ PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 cd "$PROJECT_DIR"
 
+INSTANCE="${1:-${UPSELLER_INSTANCE:-default}}"
+
 echo "[upseller] Diretório: $PROJECT_DIR"
+echo "[upseller] Instância: $INSTANCE"
 echo "[upseller] Iniciando com: npm start"
 echo
 
-npm start
+if [[ -n "$INSTANCE" && "$INSTANCE" != "default" ]]; then
+	UPSELLER_INSTANCE="$INSTANCE" npm start -- --instance "$INSTANCE"
+else
+	npm start
+fi
 
 # Se o bot sair, mantém a janela aberta para você ver o motivo.
 echo

@@ -89,6 +89,39 @@ Webhook (envio de vendas em JSON, 1 venda por requisição):
 - `UPSELLER_SALES_WEBHOOK_RETRIES`: tentativas em caso de 429/5xx (padrão: `5`)
 - `UPSELLER_SALES_WEBHOOK_RETRY_DELAY_MS`: backoff base entre tentativas (padrão: `1000`)
 
+## Rodar com dois logins (múltiplas instâncias)
+
+Você pode rodar duas instâncias do bot ao mesmo tempo, cada uma com seu próprio login/sessão, mas enviando tudo para o mesmo webhook.
+
+Como funciona:
+
+- Sessão do Chrome (cookies/login):
+	- Instância `default`: `./.session/`
+	- Instância `loja1`: `./.session.loja1/`
+- Arquivos de dados por instância:
+	- Instância `default`: `bot/state.json` e `bot/vendas.json`
+	- Instância `loja1`: `bot/state.loja1.json` e `bot/vendas.loja1.json`
+- PDFs por instância:
+	- Instância `default`: `bot/reports/`
+	- Instância `loja1`: `bot/reports/loja1/`
+
+Exemplos:
+
+```bash
+# Terminal 1
+npm start -- --instance loja1
+
+# Terminal 2
+npm start -- --instance loja2
+```
+
+Ou via env:
+
+```bash
+UPSELLER_INSTANCE=loja1 npm start
+UPSELLER_INSTANCE=loja2 npm start
+```
+
 ## Sobre os avisos no console
 
 É normal aparecerem mensagens como:
