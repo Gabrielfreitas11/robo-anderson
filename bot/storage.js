@@ -1,10 +1,13 @@
 const fs = require("fs");
 const path = require("path");
 
+const { getInstanceName, isDefaultInstance } = require("./instance");
+
 const BASE_DIR = __dirname;
 
-const SALES_FILE = path.join(BASE_DIR, "vendas.json");
-const STATE_FILE = path.join(BASE_DIR, "state.json");
+const instance = getInstanceName();
+const SALES_FILE = isDefaultInstance(instance) ? path.join(BASE_DIR, "vendas.json") : path.join(BASE_DIR, `vendas.${instance}.json`);
+const STATE_FILE = isDefaultInstance(instance) ? path.join(BASE_DIR, "state.json") : path.join(BASE_DIR, `state.${instance}.json`);
 
 function ensureFileExists(filePath, defaultContent) {
   if (fs.existsSync(filePath)) return;

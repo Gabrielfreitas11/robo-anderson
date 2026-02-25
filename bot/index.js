@@ -1,6 +1,8 @@
 const path = require("path");
 const puppeteer = require("puppeteer");
 
+const { getInstanceName, isDefaultInstance } = require("./instance");
+
 const {
   DEFAULT_URL,
   installSalesObserver,
@@ -17,7 +19,10 @@ const { generateSalesPdf } = require("./pdf");
 const { sendSalesToWebhookSequentially } = require("./webhook");
 const { nowIso, sleep, withTimeout } = require("./utils");
 
-const SESSION_DIR = path.join(__dirname, "..", ".session");
+const instance = getInstanceName();
+const SESSION_DIR = isDefaultInstance(instance)
+  ? path.join(__dirname, "..", ".session")
+  : path.join(__dirname, "..", `.session.${instance}`);
 
 // Intervalos (ms)
 const SCRAPE_EVERY_MS = 30_000;

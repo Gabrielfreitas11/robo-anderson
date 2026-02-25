@@ -4,7 +4,10 @@ const PDFDocument = require("pdfkit");
 
 const { formatDateForFilename, parseMoneyToNumber, safeToString } = require("./utils");
 
-const REPORTS_DIR = path.join(__dirname, "reports");
+const { getInstanceName, isDefaultInstance } = require("./instance");
+
+const instance = getInstanceName();
+const REPORTS_DIR = isDefaultInstance(instance) ? path.join(__dirname, "reports") : path.join(__dirname, "reports", instance);
 
 function ensureReportsDir() {
   fs.mkdirSync(REPORTS_DIR, { recursive: true });
