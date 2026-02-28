@@ -343,7 +343,8 @@ async function runOnceCycle(page, cfg, state, knownIdsSet) {
     }
   }
 
-  state.knownIds = Array.from(knownIdsSet).slice(-50_000); // evita crescimento infinito
+  const maxKnownIds = Number(process.env.UPSELLER_MAX_KNOWN_IDS || 2_000);
+  state.knownIds = Array.from(knownIdsSet).slice(-maxKnownIds);
   state.lastRunAt = nowIso();
   saveState(state);
 }
@@ -382,7 +383,8 @@ async function runRobotLoop() {
     stopping = true;
     console.log(`\n[bot] Recebido ${signal}. Encerrando com segurança...`);
     try {
-      state.knownIds = Array.from(knownIdsSet).slice(-50_000);
+      const maxKnownIds = Number(process.env.UPSELLER_MAX_KNOWN_IDS || 2_000);
+      state.knownIds = Array.from(knownIdsSet).slice(-maxKnownIds);
       state.lastRunAt = nowIso();
       saveState(state);
     } catch {
