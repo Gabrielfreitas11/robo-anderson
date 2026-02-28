@@ -15,7 +15,6 @@ const {
 } = require("./scraper");
 
 const { loadState, saveState, appendSales, loadSales } = require("./storage");
-const { generateSalesPdf } = require("./pdf");
 const { sendSalesToWebhookSequentially } = require("./webhook");
 const { nowIso, sleep, withTimeout } = require("./utils");
 
@@ -26,7 +25,6 @@ const SESSION_DIR = isDefaultInstance(instance)
 
 // Intervalos (ms)
 const SCRAPE_EVERY_MS = 30_000;
-const PDF_EVERY_MS = 10 * 60_000;
 
 function envFlag(name, defaultValue) {
   const raw = process.env[name];
@@ -341,22 +339,6 @@ async function runOnceCycle(page, cfg, state, knownIdsSet) {
   state.knownIds = Array.from(knownIdsSet).slice(-50_000); // evita crescimento infinito
   state.lastRunAt = nowIso();
   saveState(state);
-
-  // PDF: só gera se entrou venda nova; e com throttle (default 10 min)
-  if (appended > 0) {
-    const lastPdf = state.lastPdfAt ? new Date(state.lastPdfAt).getTime() : 0;
-    const shouldGenerate = Date.now() - lastPdf >= PDF_EVERY_MS;
-    if (shouldGenerate) {
-      const all = loadSales();
-      const { outPath } = await generateSalesPdf(all, { date: new Date() });
-      state.lastPdfAt = nowIso();
-      saveState(state);
-      console.log(`[bot] PDF gerado: ${outPath}`);
-    } else {
-      const waitSec = Math.ceil((PDF_EVERY_MS - (Date.now() - lastPdf)) / 1000);
-      console.log(`[bot] Venda nova detectada, mas PDF está em cooldown (~${waitSec}s).`);
-    }
-  }
 }
 
 async function runRobotLoop() {

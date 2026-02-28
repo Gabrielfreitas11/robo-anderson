@@ -63,7 +63,11 @@ Após o login, o bot navega automaticamente para `.../pt/order/all-orders` (pág
 
 - `bot/vendas.json`: array com todas as vendas coletadas
 - `bot/state.json`: estado (IDs já vistos e timestamps)
-- `bot/reports/`: PDFs gerados a cada ~10 minutos
+- `bot/reports/`: PDFs gerados (atualmente desativado)
+
+## PDF (desativado)
+
+A geração de PDFs foi desativada porque estava causando estouro de memória. O bot continua enviando as vendas via webhook normalmente.
 
 ## Ajustes (opcional)
 
