@@ -118,11 +118,42 @@ function saveState(state) {
   atomicWriteJson(STATE_FILE, state);
 }
 
+/**
+ * Limita o número de entradas em vendas.json ao máximo definido.
+ * Mantém sempre as MAIS RECENTES (fim do array).
+ * Retorna os IDs removidos para que o chamador possa mantê-los no knownIdsSet.
+ *
+ * @param {number} maxEntries  Máximo de vendas a manter (padrão: 150)
+ * @returns {{ removed: number, removedKeys: string[] }}
+ */
+function trimSales(maxEntries = 150) {
+  const sales = loadSales();
+  if (sales.length <= maxEntries) return { removed: 0, removedKeys: [] };
+
+  const toRemove = sales.slice(0, sales.length - maxEntries);
+  const kept = sales.slice(sales.length - maxEntries);
+
+  // Coleta chaves únicas dos registros que serão removidos
+  const removedKeys = [];
+  for (const s of toRemove) {
+    if (s?.id) removedKeys.push(String(s.id));
+    if (s?.upsellerId) removedKeys.push(String(s.upsellerId));
+    if (s?.orderId) removedKeys.push(String(s.orderId));
+    if (s?.pedidoId) removedKeys.push(String(s.pedidoId));
+  }
+
+  atomicWriteJson(SALES_FILE, kept);
+  console.log(`[storage] vendas.json trimado: ${toRemove.length} removido(s), ${kept.length} mantido(s).`);
+
+  return { removed: toRemove.length, removedKeys: [...new Set(removedKeys)] };
+}
+
 module.exports = {
   SALES_FILE,
   STATE_FILE,
   loadSales,
   appendSales,
+  trimSales,
   loadState,
   saveState,
 };

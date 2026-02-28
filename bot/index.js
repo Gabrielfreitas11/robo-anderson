@@ -14,7 +14,7 @@ const {
   gotoWithRetries,
 } = require("./scraper");
 
-const { loadState, saveState, appendSales, loadSales } = require("./storage");
+const { loadState, saveState, appendSales, loadSales, trimSales } = require("./storage");
 const { sendSalesToWebhookSequentially } = require("./webhook");
 const { nowIso, sleep, withTimeout } = require("./utils");
 
@@ -274,6 +274,13 @@ async function runOnceCycle(page, cfg, state, knownIdsSet) {
   if (fresh.length > 0) {
     ({ appended, appendedSales } = appendSales(fresh));
     console.log(`[bot] +${appended} novas vendas (total conhecido: ${knownIdsSet.size})`);
+
+    // Limpa vendas.json mantendo apenas as mais recentes para evitar crescimento infinito.
+    // Os IDs das entradas removidas são mantidos no knownIdsSet e em state.knownIds para
+    // que nunca sejam reenviados ao webhook.
+    const maxVendas = Number(process.env.UPSELLER_MAX_VENDAS || 150);
+    const { removedKeys } = trimSales(maxVendas);
+    for (const k of removedKeys) knownIdsSet.add(k);
   } else {
     console.log("[bot] Nenhuma venda nova.");
   }
@@ -346,7 +353,16 @@ async function runRobotLoop() {
   const state = loadState();
   const knownIdsSet = new Set();
 
-  // Reforça dedupe com base no histórico em vendas.json (evita duplicar após mudanças de parsing/ID)
+  // Semente 1: state.knownIds (persiste mesmo após trim do vendas.json)
+  try {
+    if (Array.isArray(state.knownIds)) {
+      for (const k of state.knownIds) if (k) knownIdsSet.add(String(k));
+    }
+  } catch {
+    // ignore
+  }
+
+  // Semente 2: entradas atuais de vendas.json (reforça dedupe após mudanças de parsing)
   try {
     const existing = loadSales();
     for (const s of existing) {
